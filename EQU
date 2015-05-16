@@ -1,0 +1,164 @@
+**********************************************************************
+*                                                                    *
+*                     OAC CHURCH SOLUTIONS                           *
+*                     --------------------                           *
+*                                                                    *
+*               PROGRAM      :     EQU                               *
+*               DESCRIPTION  :     DISPLAY RECORDS WITH EQUATES      *
+*               COPYRIGHT    :     ASSOCIATED COMPUTER SOLUTIONS     *
+*               AUTHOR       :     S.P. WOOKEY                       *
+*               DATE WRITTEN :     30-10-2010                        *
+*               LAST MOD     :     30-10-2010                        *
+*               OP SYSTEM    :     WINDOWS                           *
+*               VERSION      :     1.0                               *
+*                                                                    *
+**********************************************************************
+* COPYRIGHT - OLD APOSTOLIC CHURCH (NEW ZEALAND) - 2010              *
+**********************************************************************
+!
+*     ----------------------COMPILER DIRECTIVE------------------------
+!
+$OPTIONS A
+!
+*     --------------------STANDARD DEFININITIONS----------------------
+!
+* $INCLUDE EQUATES STD.DEFS
+* $INCLUDE EQUATES GUI.DEFS
+* $INCLUDE EQUATES TERM
+* $INCLUDE EQUATES USER
+* $INCLUDE EQUATES SCREEN.OPTIONS
+!
+*     ---------------------START OAC PROGRAM----------------------
+!
+!
+*     -----------------PROGRAM SPECIFIC DEFINITIONS-------------------
+!
+      MSG.PGM = 'EQU'
+      REPAINT = ''
+!
+*     ----------------------GENERAL DEFINITIONS-----------------------
+!
+      TRUE = 1
+      FALSE = 0
+      BELL = CHAR(7)
+      EOL = @(-4)
+!
+*     --------------------GET COMMAND LINE INPUT----------------------
+!
+      SEN = @SENTENCE
+      SEN = TRIM(SEN)
+      F = FIELD(SEN,' ',2)
+*      IF F[1,4] # 'EMB.' THEN
+*         F = 'EMB.':F
+*      END
+*      EQ.F = FIELD(F,'.',2,9)
+      EQ.F = F
+      KEY = FIELD(SEN,' ',3)
+      IF KEY = '' AND @SYSTEM.RETURN.CODE = 0 THEN
+         PROMPTING = TRUE
+      END ELSE
+         PROMPTING = FALSE
+      END
+      CALL !BPIOCP
+!
+*     --------------------------OPEN FILES----------------------------
+!
+      OPEN '','EQUATES' TO EQ.FILE ELSE
+         PRINT @(0,34):EOL:'CANT OPEN FILE "EQUATES"':
+         GOTO OAC.STOP
+      END
+      OPEN '',F TO FILE ELSE
+         PRINT @(0,23):EOL: 'CANT OPEN FILE "':F:'"':
+         GOTO OAC.STOP
+      END
+      READ EQ.REC FROM EQ.FILE,EQ.F ELSE
+         PRINT @(0,23):EOL: 'CANT READ "':F:'" FROM EQUATES FILE':
+         GOTO OAC.STOP
+      END
+!
+*     -----------------------PROMPT FOR RECORD------------------------
+!
+1000:*
+      IF PROMPTING THEN
+         PRINT
+         PRINT 'Enter record key ':
+         INPUT KEY
+         IF KEY = '' THEN GOTO OAC.STOP
+         IF KEY = 'Q' THEN GOTO OAC.STOP
+         GOSUB 3000
+         GOTO 1000
+      END
+!
+*     -------------------------ONLY ONE KEY---------------------------
+!
+      IF KEY # '' AND KEY # '*' THEN
+         GOSUB 3000                      ; * LIST RECORD
+         GOTO OAC.STOP
+      END
+!
+*     ------------------------SELECT RECORDS--------------------------
+!
+      IF KEY = '*' THEN
+         KEY = ''
+         EXECUTE 'SSELECT ':F
+      END
+      IF @SYSTEM.RETURN.CODE = 0 THEN
+         PRINT 'No active select list found!':BELL:
+         GOTO OAC.STOP
+      END ELSE
+2000:*
+         READNEXT KEY ELSE GOTO OAC.STOP
+         GOSUB 3000                      ; * LIST RECORD
+         GOTO 2000
+      END
+!
+*     ------------------------DISPLAY RECORD--------------------------
+!
+3000:*
+      HEAD = 'OAC EQU':SPACE(15):@(-13):'DISPLAY RECORDS WITH EQUATES':@(-14)
+      HEAD = HEAD:SPACE(17):"PAGE  'PL'"
+      HEAD = HEAD:SPACE(25):'File : ':F:' Record Key : ':KEY:"'L'"
+      HEAD = HEAD:STR('-',80):"'L'"
+      HEADING HEAD
+      READ REC FROM FILE,KEY ELSE REC = ''
+      Z.COUNT = COUNT(EQ.REC,@FM) + 1
+      FOR Z = 1 TO Z.COUNT
+         IF INDEX(EQ.REC<Z>,'EQU ',1) THEN
+            LINE = EQ.REC<Z>
+            LINE = TRIM(LINE)
+            DESC = FIELD(LINE,' ',2)
+            NO = FIELD(LINE,' ',4)
+            PRINT NO '3"0"R':' ':DESC 'L#25':REC<NO> 'L#40':
+            IF INDEX(DESC,'DATE',1) THEN
+               DATE.FLD = REC<NO,1>
+               CONVERT ' ' TO '-' IN DATE.FLD
+               PRINT ' ':OCONV(DATE.FLD,'D2-')
+            END ELSE
+               PRINT
+            END
+         END
+      NEXT Z
+      RETURN
+!
+*     ----------------OAC SCREEN MESSAGE ROUTINE------------------
+!
+7900:*
+!
+*     MSG           - Message number or "Actual Message Text"
+*     MSG.VARS      - Array of message variables to be inserted @1 @2 etc
+*     MSG.POS       - Position x,y or blank is 0,23
+*     MSG.FMT       - Format default is L#80
+*     MSG.BELL      - True or False default is False
+*     MSG.SEVERITY  - (I)nformation (W)arning (E)rror (F)atal error
+*     MSG.STYLE     - (B)ox (S)tatus line (C)ounter (E)vent
+*     MSG.BEHAVIOUR - (P)ause (S)leep (A)uto default is (A)uto
+!
+*     CALL SCR.MSG(MSG,MSG.VARS,MSG.POS,MSG.FMT,MSG.BELL,MSG.SEVERITY,MSG.STYLE,MSG.BEHAVIOUR,REPAINT)
+      RETURN
+!
+*     -----------------OAC PROGRAM CLOSE ROUTINE------------------
+!
+OAC.STOP:
+*      CALL OAC.STOP
+      STOP
+   END
