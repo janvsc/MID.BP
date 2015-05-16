@@ -1,0 +1,152 @@
+**********************************************************************
+* program                                                                   *
+**********************************************************************
+*  CONFIRM STARTUP to the initiating ASP SCRIPT and wait
+*  for the user page to load and announce its presence
+*      CRT "<TX>OK</TX>"
+*      INPUT XSTART
+*
+!
+*-----VARIABLES
+!
+      PROMPT ''
+      END.KEYS = 0
+      SC = ''
+      PL1 = ''
+      AM = CHAR(254)
+      VM = CHAR(253)
+      CL = CHAR(13)
+!
+*-----OPEN FILES
+!
+      OPEN '','MEMBERS' TO MEM.FILE ELSE STOP
+      OPEN '','CONG' TO CONG.FILE ELSE STOP
+      OPEN '','OFFICERS' TO SUP.FILE ELSE STOP
+!
+*-----DISPLAY SCREEN
+!
+      GOSUB HEADERSUB
+!
+*-----Generates the Buttons at the bottom of the screen
+!
+      CALL WEBDX(0,10,0,0,"The following members share a birthday.","","","",SC)
+      CALL WEBIX(15,5,6,0, "ListBox", "fx91", "<BUTTON>", "", SC)
+      CALL WEBIX(21,5,12,0, "Next 7 days", "fx93", "<BUTTON>", "", SC)
+      CALL WEBIX(33,5,6,0, "Today", "fx95", "<BUTTON>", "", SC)
+      CALL WEBIX(39,5,12,0, "Last 7 days", "fx96", "<BUTTON>", "", SC)
+      CALL WEBIX(51,5,6,0, "Exit", "fx94", "<BUTTON>", 'style="background-color:lightblue"', SC)
+!
+      CALL WEBIX(1,12,150,20,"", "fx1","" , 'style="background-color:lightblue"', SC)
+!
+* Talking to Web Page Sub Window_Onstart
+* Displays the basic page layout
+!
+      CRT "^IREPLACE|doc1=":SC:
+!
+*-----BEGIN CALCULATION
+!
+      HUSH ON
+      EXECUTE 'SELECT MEM BY CONG.NAME BY SUP.NAME'
+      HUSH OFF
+      SC = ""
+!
+      LOOP
+         READNEXT MEM.KEY ELSE END.KEYS = 1
+      UNTIL END.KEYS
+         READ MEM.REC FROM MEM.FILE,MEM.KEY ELSE MEM.REC = ""
+         DOB = OCONV(MEM.REC<3>,'D2-')
+         TODAY = OCONV(DATE(),'D2-')
+         TDAY = FIELD(TODAY,'-',1)
+         TMTH = FIELD(TODAY,'-',2)
+         DOB.DAY = FIELD(DOB,'-',1)
+         DOB.MTH = FIELD(DOB,'-',2)
+         CONG = MEM.REC<10>
+         EMAIL = MEM.REC<7>
+         PHONE = MEM.REC<5>
+         NAME = FIELD(MEM.REC<2>,' ',1)
+!
+         READ CONG.REC FROM CONG.FILE,CONG ELSE CONG.REC = ''
+         CONG.NAME = CONG.REC<1>
+         SUPERIOR = MEM.REC<8>
+!
+         READ SUP.REC FROM SUP.FILE,SUPERIOR ELSE SUP.REC = ''
+         SUP.TITLE = SUP.REC<1>
+         SUP.NAME = SUP.REC<2>
+!
+         IF DOB.MTH = TMTH THEN
+            BEGIN CASE
+               CASE DOB.DAY = TDAY
+*                  PL1 = CONG.NAME:SPACE(1):SUP.TITLE:SPACE(1):SUP.NAME:CHAR(13)
+                  GOSUB 8000
+               CASE DOB.DAY = TDAY + 1
+                  GOSUB 8000
+               CASE DOB.DAY = TDAY + 2
+                  GOSUB 8000
+               CASE DOB.DAY = TDAY + 3
+                  GOSUB 8000
+               CASE DOB.DAY = TDAY + 4
+                  GOSUB 8000
+               CASE DOB.DAY = TDAY + 5
+                  GOSUB 8000
+               CASE DOB.DAY = TDAY + 6
+                  GOSUB 8000
+               CASE DOB.DAY = TDAY + 7
+                  GOSUB 8000
+            END CASE
+            SC = "^VALID|fx1=":PL1
+            SC := "^FOCUS|fx94"
+         END
+      REPEAT
+
+      CRT SC:
+      GOTO 9000
+!
+*-----BUILD MEMBER DETAIL
+!
+8000:*
+!
+      PL1 := TRIM(MEM.REC<4>) 'L#11'
+      PL1 := NAME 'L#20'
+      PL1 := TRIM(MEM.REC<1>) 'L#20'
+      PL1 := DOB 'L#9'
+      PL1 := EMAIL 'L#30'
+      PL1 := PHONE 'L#12':SPACE(1)
+      PL1 := CONG.NAME 'L#20':SPACE(1)
+      PL1 := SUP.TITLE:SPACE(1):SUP.NAME 'L#25'
+      PL1 := CHAR(13)
+*      PL1 = CHANGE(PL1,' ','&nbsp;')
+      RETURN
+!
+*-----BUILD HEADER DISPLAY
+!
+HEADERSUB:*
+      S = '<table width="500px" height="100px"> '
+      S := '<tr> '
+      S := '<td width="150px" height="100px"><a><img border="0" '
+      S := ' src="../PxRES/4401.gif" WIDTH="150" HEIGHT="100"></a></td> '
+      S := ' <td width="350px" height="100px" bgcolor="#ffffff"> '
+      S := ' <p align="center" style="BACKGROUND-COLOR: rgb(0,0,128); COLOR: rgb(255,255,255)"><font color="#ffffff" face="Arial" '
+      S := ' size="3"><strong>Birthdays by congregation</strong></font></p> '
+      S := ' </td> '
+      S := ' </tr> '
+      S := '</table> '
+      CALL WEBDX(0,0,80,0, S, "", "", "", SC)
+      RETURN
+!
+9000:*
+      CRT "</TX>"
+      INPUT REQUEST
+      CRT "<TX>":
+      * ongoing conversation
+      FIELD.ID = FIELD(REQUEST, "|", 1)
+      FIELD.GROUP = FIELD(FIELD.ID, "x", 1)
+      FIELD.INDEX = FIELD(FIELD.ID, "x", 2)
+      GRID.ROW = FIELD(FIELD.ID, "x", 3)
+      GRID.COL = FIELD(FIELD.ID, "x", 4)
+      INPUT.VAL = FIELD(REQUEST, "|", 2)
+      SC = 'End of run '
+      SC := 'Now we need to send email...'
+      SC = "^MSGBOX| Now we need to send email"
+      CRT SC:
+      RETURN
+   END
